@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Smart Surveillance Dashboard</title>
+<style>
+:root{font-family:Inter,Segoe UI,Arial,sans-serif;color:#a8b0bf;background:#101521}
+*{box-sizing:border-box}body{margin:0}header{padding:24px 5%;background:#171f30;border-bottom:1px solid #303a4d}
+h1{margin:0;font-size:clamp(1.4rem,3vw,2rem)}header p{color:#aebbd0;margin:8px 0 0}
+main{max-width:1200px;margin:auto;padding:26px 5%}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.card,.panel{background:#171f30;border:1px solid #303a4d;border-radius:14px;padding:18px}
+.label{color:#aebbd0;font-size:.9rem}.number{font-size:2rem;font-weight:700;margin-top:10px}
+.panel{margin-top:20px}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+button{background:#7dd3fc;color:#082032;border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
+.status{display:inline-block;border-radius:20px;padding:5px 10px;background:#183b32;color:#8ef0c5;font-size:.85rem}
+.note{color:#aebbd0;line-height:1.6}.table-wrap{overflow:auto
+}table{width:100%;border-collapse:collapse;margin-top:12px;min-width:650px}th,td{text-align:left;padding:12px 10px;border-bottom:1px solid #303a4d;font-size:.92rem}th{color:#aebbd0;font-weight:600}
+.tag{background:#3b2930;color:#ffb7c1;padding:4px 8px;border-radius:6px;font-size:.8rem}footer{padding:24px;text-align:center;color:#8e9bb0}
+</style>
+</head>
+<body>
+<header><h1>AI Smart Surveillance System</h1><p>Computer vision events • Spring Boot REST API • PostgreSQL</p></header>
+<main>
+  
+  <div class="cards">
+    <div class="card"><div class="label">Total events shown</div><div class="number" id="total">—</div></div>
+    <div class="card"><div class="label">Intrusion alerts</div><div class="number" id="intrusions">—</div></div>
+    <div class="card"><div class="label">Fire / smoke events</div><div class="number" id="fire">—</div></div>
+    <div class="card"><div class="label">Weapon alerts</div><div class="number" id="weapons">—</div></div>
+    <div class="card"><div class="label">API status</div><div class="number"><span class="status" id="status">Checking…</span></div></div>
+  </div>
+  <section class="panel">
+    <div class="panel-head"><div><h2>Event history</h2><div class="note">Refreshes automatically every 5 seconds. The Python detector opens video in its own window.</div></div><button onclick="loadEvents()">Refresh now</button></div>
+    <div class="table-wrap"><table><thead><tr><th>ID</th><th>Type</th><th>Description</th><th>Confidence</th><th>Time</th><th>Source</th></tr></thead><tbody id="rows"><tr><td colspan="6">Loading…</td></tr></tbody></table></div>
+  </section>
+  <section class="panel">
+    <h2>How to start video analysis</h2>
+    <p class="note">In the Python terminal, run <code>python detector.py --source 0</code> for webcam or <code>python detector.py --source "C:\path\video.mp4"</code> for a recorded video. Press <b>q</b> in the video window to stop.</p>
+    <p class="note">The restricted rectangle is configured in <code>python-ai/detector.py</code>. Fire/smoke and weapon alerts require compatible custom models. Face recognition is a separate opt-in demo.</p>
+  </section>
+</main>
+<footer>Educational prototype only. Alerts can be wrong; verify events manually.</footer>
+<script>
+async function loadEvents(){
+  try{
+    const r=await fetch('/api/events'); if(!r.ok) throw new Error('API unavailable');
+    const events=await r.json(); document.getElementById('status').textContent='Online';
+    document.getElementById('total').textContent=events.length;
+    document.getElementById('intrusions').textContent=events.filter(e=>(e.eventType||'').toUpperCase()==='INTRUSION').length;
+    document.getElementById('fire').textContent=events.filter(e=>['FIRE','SMOKE'].includes((e.eventType||'').toUpperCase())).length;
+    document.getElementById('weapons').textContent=events.filter(e=>(e.eventType||'').toUpperCase()==='WEAPON').length;
+    const rows=document.getElementById('rows');
+    if(!events.length){rows.innerHTML='<tr><td colspan="6">No events yet. Start the Python detector.</td></tr>';return;}
+    rows.innerHTML=events.map(e=>`<tr><td>${e.id??''}</td><td><span class="tag">${escapeHtml(e.eventType||'')}</span></td><td>${escapeHtml(e.description||'')}</td><td>${e.confidence==null?'—':(Number(e.confidence)*100).toFixed(1)+'%'}</td><td>${e.occurredAt?new Date(e.occurredAt).toLocaleString():'—'}</td><td>${escapeHtml(e.source||'')}</td></tr>`).join('');
+  }catch(err){document.getElementById('status').textContent='Offline';document.getElementById('rows').innerHTML='<tr><td colspan="6">Could not load events. Start Spring Boot and check PostgreSQL.</td></tr>';}
+}
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+loadEvents();setInterval(loadEvents,5000);
+</script>
+</body></html>

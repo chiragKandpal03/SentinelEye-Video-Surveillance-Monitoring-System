@@ -1,0 +1,28 @@
+# Python
+.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# Java / Maven
+**/target/
+*.class
+
+# Python virtual environments
+venv/
+env/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
